@@ -1,0 +1,21 @@
+{
+  "name": "autocad-consumer",
+  "version": "1.0.0",
+  "description": "AutoCad ConsumeR - Engineering CAD E-Commerce Platform",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.x"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "autocad",
+    "ecommerce",
+    "cad-blocks",
+    "dwg",
+    "dxf"
+  ],
+  "author": "AutoCad ConsumeR",
+  "license": "ISC"
+}
