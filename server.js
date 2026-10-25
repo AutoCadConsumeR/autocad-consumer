@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 /**
  * AutoCad ConsumeR — Localhost Interactive Development & Preview Server
  * Connected to persistent SQLite database (autocad_consumer.sqlite)
@@ -25,12 +26,13 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const BASE_DIR = __dirname;
-const THEME_DIR = path.join(BASE_DIR, 'autocad-consumer-theme');
-const CORE_DIR = path.join(BASE_DIR, 'autocad-consumer-core');
-const DOWNLOADS_DIR = path.join(BASE_DIR, 'downloads');
-const DB_FILE = path.join(BASE_DIR, 'autocad_consumer.sqlite');
-const MYSQL_FILE = path.join(BASE_DIR, 'autocad_consumer_mysql.sql');
-const SUPABASE_FILE = path.join(BASE_DIR, 'autocad_consumer_supabase.sql');
+const SUB_DIR = path.join(BASE_DIR, 'AutoCad ConsumeR E-Commerce');
+const THEME_DIR = fs.existsSync(path.join(BASE_DIR, 'autocad-consumer-theme')) ? path.join(BASE_DIR, 'autocad-consumer-theme') : path.join(SUB_DIR, 'autocad-consumer-theme');
+const CORE_DIR = fs.existsSync(path.join(BASE_DIR, 'autocad-consumer-core')) ? path.join(BASE_DIR, 'autocad-consumer-core') : path.join(SUB_DIR, 'autocad-consumer-core');
+const DOWNLOADS_DIR = fs.existsSync(path.join(BASE_DIR, 'downloads')) ? path.join(BASE_DIR, 'downloads') : path.join(SUB_DIR, 'downloads');
+const DB_FILE = fs.existsSync(path.join(BASE_DIR, 'autocad_consumer.sqlite')) ? path.join(BASE_DIR, 'autocad_consumer.sqlite') : path.join(SUB_DIR, 'autocad_consumer.sqlite');
+const MYSQL_FILE = fs.existsSync(path.join(BASE_DIR, 'autocad_consumer_mysql.sql')) ? path.join(BASE_DIR, 'autocad_consumer_mysql.sql') : path.join(SUB_DIR, 'autocad_consumer_mysql.sql');
+const SUPABASE_FILE = fs.existsSync(path.join(BASE_DIR, 'autocad_consumer_supabase.sql')) ? path.join(BASE_DIR, 'autocad_consumer_supabase.sql') : path.join(SUB_DIR, 'autocad_consumer_supabase.sql');
 
 // Load Bundled Static Assets (Vercel serverless / zero-dependency asset serving)
 let staticBundle = null;
@@ -50,6 +52,37 @@ const EMBEDDED_LOGO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAABAAAAAIACAYAAAAczR65AAAQAE
 
 // Load SQL Database Layer
 const db = require('./database.js');
+
+// ==============================================================================
+// Admin Security & Access Protection System (Password Gating & Session Token)
+// ==============================================================================
+const DEFAULT_ADMIN_PASSWORD = 'AutoCadAdmin@2026';
+
+function getAdminPassword() {
+  try {
+    const s = db.getSettings();
+    return s.adminPassword || DEFAULT_ADMIN_PASSWORD;
+  } catch (e) {
+    return DEFAULT_ADMIN_PASSWORD;
+  }
+}
+
+const AUTH_SALT = 'cad-security-salt-01878205459';
+
+function getExpectedSessionToken() {
+  return crypto.createHmac('sha256', AUTH_SALT).update(getAdminPassword()).digest('hex');
+}
+
+function isUserAdmin(req) {
+  const cookieHeader = req.headers['cookie'] || '';
+  const match = cookieHeader.match(/cad_admin_session=([a-f0-9]+)/);
+  if (match && match[1] === getExpectedSessionToken()) {
+    return true;
+  }
+  return false;
+}
+
+
 
 // In-memory session cart
 let sessionCart = [
@@ -100,8 +133,8 @@ function renderHeader(cartCount, cartTotal) {
       </div>
       <div class="cad-topbar-right">
         <span class="cad-badge-tag">CURRENCY: BDT (৳)</span>
-        <a href="/database" style="color:var(--cad-technical-cyan); font-weight:700; text-decoration:none; margin-right:12px;">🗄️ Database Manager</a>
-        <a href="/admin" style="color:var(--cad-accent-orange); font-weight:700; text-decoration:none;">⚙️ Store Admin →</a>
+        <a href="https://wa.me/8801878205459" target="_blank" style="color:var(--cad-technical-cyan); font-weight:700; text-decoration:none; margin-right:12px;">💬 WhatsApp Support</a>
+        <a href="tel:01878205459" style="color:var(--cad-accent-orange); font-weight:700; text-decoration:none;">📞 01878205459</a>
       </div>
     </div>
   </div>
@@ -136,12 +169,14 @@ function renderHeader(cartCount, cartTotal) {
 
         <!-- 3. Account Link -->
         <div class="cad-header-account">
-          <a href="/database" class="cad-account-btn" title="Open Web Database Manager">
-            <svg class="cad-account-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"></path><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v12c0 1.66 3.58 3 8 3s8-1.34 8-3V6"></path><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"></path></svg>
+          <a href="#cad-support" class="cad-account-btn" title="Customer Support & Helpline">
+            <svg class="cad-account-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <div class="cad-account-text">
-              <span class="cad-account-greeting">Database GUI</span>
-              <span class="cad-account-label">Live SQL Manager</span>
+              <span class="cad-account-greeting">Customer Desk</span>
+              <span class="cad-account-label">Verified Bureau</span>
             </div>
+          </a>
+        </div>
           </a>
         </div>
 
@@ -175,7 +210,7 @@ function renderHeader(cartCount, cartTotal) {
         <li class="cad-nav-item"><a href="#cad-categories">Categories</a></li>
         <li class="cad-nav-item"><a href="#cad-latest">All CAD Products</a></li>
         <li class="cad-nav-item"><a href="#cad-services">2D Drafting Services</a></li>
-        <li class="cad-nav-item"><a href="/database">🗄️ Database Manager</a></li>
+        <li class="cad-nav-item"><a href="#cad-support">Customer Support</a></li>
       </ul>
       <a href="#cad-services" onclick="openQuoteModal();" class="cad-nav-cta">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
@@ -280,21 +315,21 @@ function renderFooter() {
         <div class="cad-footer-col">
           <h4>CAD Resources</h4>
           <ul class="cad-footer-links">
-            <li><a href="#cad-categories" onclick="selectCategory('cad-blocks')">CAD Blocks & Symbols</a></li>
-            <li><a href="#cad-categories" onclick="selectCategory('templates')">DWG/DXF Templates</a></li>
-            <li><a href="#cad-categories" onclick="selectCategory('architectural')">Architectural Drafting</a></li>
-            <li><a href="#cad-categories" onclick="selectCategory('structural')">Structural Drawing Sets</a></li>
-            <li><a href="#cad-categories" onclick="selectCategory('boq-tools')">BOQ & Estimation Tools</a></li>
+            <li><a href="#cad-latest">CAD Block Library</a></li>
+            <li><a href="#cad-categories">Drawing Templates & Sheets</a></li>
+            <li><a href="#cad-categories">Architectural Villa Plans</a></li>
+            <li><a href="#cad-services">Custom 2D CAD Drafting</a></li>
+            <li><a href="#cad-support">Payment & Verification Guide</a></li>
           </ul>
         </div>
         <div class="cad-footer-col">
-          <h4>Database & System</h4>
+          <h4>Customer Care & Policies</h4>
           <ul class="cad-footer-links">
-            <li><a href="/database">🗄️ Web Database Manager</a></li>
-            <li><a href="/admin">⚙️ Admin Verification Panel</a></li>
-            <li><a href="/api/admin/download-db">💾 Download SQLite (.db)</a></li>
-            <li><a href="/api/admin/download-mysql">📥 Export MySQL (.sql)</a></li>
-            <li><a href="/api/admin/download-supabase">⚡ Export Supabase (.sql)</a></li>
+            <li><a href="#cad-support">Instant Digital Download Policy</a></li>
+            <li><a href="#cad-support">bKash & Nagad Payment Guide</a></li>
+            <li><a href="#cad-support">AutoCAD Format Compatibility (2007-2025)</a></li>
+            <li><a href="#cad-quote">Custom Drafting Quote Request</a></li>
+            <li><a href="https://wa.me/8801878205459" target="_blank">Direct Engineering WhatsApp Helpline</a></li>
           </ul>
         </div>
         <div class="cad-footer-col">
@@ -310,7 +345,7 @@ function renderFooter() {
     </div>
     <div class="cad-footer-bottom">
       <div class="cad-container">
-        <p>&copy; 2026 <strong>AutoCad ConsumeR</strong>. All rights reserved. Persistent SQLite Database Active.</p>
+        <p>&copy; 2026 <strong>AutoCad ConsumeR</strong>. All rights reserved. <a href="/admin/login" style="color:#64748B; text-decoration:none; opacity:0.6;" title="Admin Portal">🔒</a></p>
         <span>Accepted BDT Payments: bKash (${settings.bkashNo}) | Nagad (${settings.nagadNo}) | Rocket (${settings.rocketNo}) | COD</span>
       </div>
     </div>
@@ -445,7 +480,7 @@ function renderHomePage() {
             </p>
             <div class="cad-hero-ctas">
               <a href="#cad-latest" class="cad-btn cad-btn-primary">Shop CAD Catalog</a>
-              <a href="/database" class="cad-btn cad-btn-outline" style="border-color:#38BDF8; color:#38BDF8;">🗄️ Explore Live Database</a>
+              <a href="#cad-quote" class="cad-btn cad-btn-outline" style="border-color:#38BDF8; color:#38BDF8;">📐 Request CAD Quote</a>
             </div>
             <div class="cad-hero-stats">
               <div class="cad-stat-item"><span class="cad-stat-val">100%</span><span class="cad-stat-label">Native DWG Files</span></div>
@@ -1326,10 +1361,9 @@ function renderOrderReceived(orderId) {
         <tr style="border-bottom:1px solid #E2E8F0;"><td style="padding:10px 0; color:#64748B;">Database:</td><td style="padding:10px 0; color:#10B981; font-weight:bold;">Persistent SQLite (autocad_consumer.sqlite)</td></tr>
       </table>
 
-      <div style="display:flex; justify-content:center; gap:14px;">
-        <a href="/" class="cad-btn cad-btn-secondary">Return to Catalog</a>
-        <a href="/database" class="cad-btn cad-btn-secondary" style="border-color:#38BDF8; color:#0284C7;">🗄️ View in Database Manager</a>
-        <a href="/admin" class="cad-btn cad-btn-primary">Open Admin Console to Approve</a>
+      <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+        <a href="/" class="cad-btn cad-btn-primary">Return to CAD Catalog</a>
+        <a href="https://wa.me/8801878205459?text=Hello%20AutoCad%20ConsumeR,%20I%20have%20submitted%20order%20payment" target="_blank" class="cad-btn cad-btn-secondary" style="background:#25D366; color:#fff; border-color:#25D366; font-weight:bold;">💬 Chat on WhatsApp for Fast Approval</a>
       </div>
     </div>
   </div>
@@ -1412,6 +1446,7 @@ function renderAdminPage() {
         <a href="/api/admin/download-db" class="cad-btn cad-btn-secondary" style="font-size:0.85rem; background:#EFF6FF; color:#1769AA;">💾 Backup SQLite (.db)</a>
         <a href="/api/admin/download-mysql" class="cad-btn cad-btn-secondary" style="font-size:0.85rem; background:#FEF3C7; color:#92400E;">📥 Export MySQL (.sql)</a>
         <a href="/api/admin/download-supabase" class="cad-btn cad-btn-secondary" style="font-size:0.85rem; background:#D1FAE5; color:#065F46; font-weight:bold;">⚡ Supabase (.sql)</a>
+        <a href="/admin/logout" class="cad-btn cad-btn-secondary" style="font-size:0.85rem; background:#FEE2E2; color:#B91C1C; font-weight:bold; border:none; margin-right:8px;">🚪 Logout</a>
         <a href="/" class="cad-btn cad-btn-primary" style="font-size:0.85rem;">View Store →</a>
       </div>
     </div>
@@ -1518,6 +1553,11 @@ function renderAdminPage() {
       </div>
       <p style="font-size:0.85rem; color:#64748B; margin-top:0;">Changes saved here are permanently written to the <code>settings</code> table in <code>autocad_consumer.sqlite</code> and instantly update the entire storefront.</p>
       <form onsubmit="saveSettings(event)" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:18px;">
+        <div>
+          <div>
+          <label style="display:block; font-weight:bold; margin-bottom:6px; color:#F59E0B;">🔐 Admin Access Password (Master Key)</label>
+          <input type="text" name="adminPassword" value="${settings.adminPassword || 'AutoCadAdmin@2026'}" class="cad-form-control" style="background:#fff; color:#000; font-family:monospace; font-weight:bold;">
+        </div>
         <div>
           <label style="display:block; font-weight:bold; margin-bottom:6px; color:#38BDF8;">Store Brand Name</label>
           <input type="text" name="brandName" value="${settings.brandName || 'AutoCad ConsumeR'}" class="cad-form-control" style="background:#fff; color:#000;">
@@ -1655,6 +1695,7 @@ function renderAdminPage() {
       e.preventDefault();
       const form = e.target;
       const payload = {
+        adminPassword: form.adminPassword ? form.adminPassword.value : undefined,
         brandName: form.brandName.value,
         phone: form.phone.value,
         whatsapp: form.whatsapp.value,
@@ -1756,6 +1797,7 @@ function renderDatabasePage() {
       <a href="/api/admin/download-mysql" class="db-tab-btn" style="text-decoration:none; background:#F59E0B; color:#000; border-color:#F59E0B;">📥 Export MySQL (.sql)</a>
       <a href="/api/admin/download-supabase" class="db-tab-btn" style="text-decoration:none; background:#3ECF8E; color:#0B1220; font-weight:bold; border-color:#3ECF8E;">⚡ Export Supabase (.sql)</a>
       <a href="/admin" class="db-tab-btn" style="text-decoration:none;">⚙️ Store Admin</a>
+      <a href="/admin/logout" class="db-tab-btn" style="text-decoration:none; background:#EF4444; color:#fff; border-color:#EF4444;">🚪 Logout</a>
       <a href="/" class="db-tab-btn" style="text-decoration:none;">Storefront →</a>
     </div>
   </div>
@@ -2185,6 +2227,34 @@ const server = http.createServer((req, res) => {
       }
 
       // Order Verification
+      
+      // Admin Authentication Login Endpoint
+      
+      // Security Enforcement: Require Admin Session for all sensitive admin/db endpoints
+      if ((pathname.startsWith('/api/admin/') && pathname !== '/api/admin/login') || pathname.startsWith('/api/db/')) {
+        if (!isUserAdmin(req)) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Unauthorized: Admin authentication required.' }));
+          return;
+        }
+      }
+
+      if (pathname === '/api/admin/login') {
+        const expected = getAdminPassword();
+        if (data.password && data.password === expected) {
+          const token = getExpectedSessionToken();
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Set-Cookie': 'cad_admin_session=' + token + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400'
+          });
+          res.end(JSON.stringify({ success: true, redirect: data.redirect || '/admin' }));
+        } else {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Access Denied: Invalid Security Password.' }));
+        }
+        return;
+      }
+
       if (pathname === '/api/admin/verify') {
         db.verifyOrder(data.orderId);
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2297,8 +2367,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // GET API: Table Data for Database Manager
+
+  // GET API: Table Data for Database Manager (Security Guarded)
   if (pathname === '/api/db/table-data') {
+    if (!isUserAdmin(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Unauthorized: Admin session required.' }));
+      return;
+    }
+
     const table = parsedUrl.query.table || 'products';
     const data = db.getTableData(table);
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2391,6 +2468,7 @@ const server = http.createServer((req, res) => {
 
   // Backup SQLite Download
   if (pathname === '/api/admin/download-db') {
+    if (!isUserAdmin(req)) { res.writeHead(302, { 'Location': '/admin/login' }); res.end(); return; }
     if (fs.existsSync(DB_FILE)) {
       const stat = fs.statSync(DB_FILE);
       res.writeHead(200, {
@@ -2405,6 +2483,7 @@ const server = http.createServer((req, res) => {
 
   // Export MySQL Dump Download
   if (pathname === '/api/admin/download-mysql') {
+    if (!isUserAdmin(req)) { res.writeHead(302, { 'Location': '/admin/login' }); res.end(); return; }
     if (fs.existsSync(MYSQL_FILE)) {
       const stat = fs.statSync(MYSQL_FILE);
       res.writeHead(200, {
@@ -2419,6 +2498,7 @@ const server = http.createServer((req, res) => {
 
   // Export Supabase PostgreSQL Dump Download
   if (pathname === '/api/admin/download-supabase') {
+    if (!isUserAdmin(req)) { res.writeHead(302, { 'Location': '/admin/login' }); res.end(); return; }
     if (fs.existsSync(SUPABASE_FILE)) {
       const stat = fs.statSync(SUPABASE_FILE);
       res.writeHead(200, {
@@ -2450,14 +2530,47 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Admin Logout Route
+  if (pathname === '/admin/logout') {
+    res.writeHead(302, {
+      'Location': '/',
+      'Set-Cookie': 'cad_admin_session=; Path=/; HttpOnly; Max-Age=0'
+    });
+    res.end();
+    return;
+  }
+
+  // Admin Login Page Route
+  if (pathname === '/admin/login') {
+    if (isUserAdmin(req)) {
+      res.writeHead(302, { 'Location': '/admin' });
+      res.end();
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(renderAdminLoginPage('/admin'));
+    return;
+  }
+
+  // Protected Admin Portal
   if (pathname === '/admin') {
+    if (!isUserAdmin(req)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(renderAdminLoginPage('/admin'));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(renderAdminPage());
     return;
   }
 
-  // Built-in Web Database Manager (phpMyAdmin Alternative)
+  // Protected Web Database Manager (phpMyAdmin Alternative)
   if (pathname === '/database' || pathname === '/db' || pathname === '/phpmyadmin') {
+    if (!isUserAdmin(req)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(renderAdminLoginPage(pathname));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(renderDatabasePage());
     return;
@@ -2495,3 +2608,159 @@ if (require.main === module) {
 }
 
 module.exports = server;
+
+
+function renderAdminLoginPage(redirectUrl) {
+  const dest = redirectUrl || '/admin';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Clearance — AutoCad ConsumeR Admin Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      background: #0B1220;
+      color: #F8FAFC;
+      font-family: 'Inter', -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.12) 0%, transparent 50%),
+        linear-gradient(rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14, 165, 233, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+    }
+    .auth-card {
+      background: #111C30;
+      border: 1px solid #1E293B;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.1);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      padding: 36px 32px;
+      position: relative;
+    }
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #38BDF8, #F97316);
+      border-radius: 16px 16px 0 0;
+    }
+    .auth-header { text-align: center; margin-bottom: 26px; }
+    .auth-logo { height: 44px; margin-bottom: 14px; }
+    .auth-title { font-size: 1.25rem; font-weight: 800; color: #FFFFFF; margin: 0 0 8px 0; }
+    .auth-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(239, 68, 68, 0.15); color: #F87171;
+      border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 10px;
+      border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .auth-input-group { margin-bottom: 20px; }
+    .auth-label { display: block; font-size: 0.82rem; font-weight: 600; color: #94A3B8; margin-bottom: 8px; }
+    .auth-input {
+      width: 100%; padding: 12px 16px; background: #0B1220;
+      border: 1px solid #334155; border-radius: 8px; color: #F8FAFC;
+      font-size: 0.95rem; font-family: 'JetBrains Mono', monospace;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .auth-input:focus { border-color: #38BDF8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
+    .auth-btn {
+      width: 100%; padding: 13px; background: linear-gradient(135deg, #0284C7, #0369A1);
+      border: none; border-radius: 8px; color: #FFFFFF; font-weight: 700;
+      font-size: 0.95rem; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 8px; transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .auth-btn:hover { background: linear-gradient(135deg, #0369A1, #0284C7); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35); }
+    .auth-alert {
+      display: none; background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5;
+      padding: 10px 14px; border-radius: 6px; font-size: 0.85rem;
+      margin-bottom: 16px; text-align: center;
+    }
+    .auth-footer { margin-top: 24px; text-align: center; font-size: 0.78rem; color: #64748B; }
+    .auth-footer a { color: #38BDF8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/theme/assets/images/logo.png" alt="AutoCad ConsumeR" class="auth-logo">
+      <h1 class="auth-title">Administrative Security Portal</h1>
+      <div class="auth-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        Restricted Security Clearance Required
+      </div>
+    </div>
+
+    <div id="authAlert" class="auth-alert"></div>
+
+    <form onsubmit="handleAdminLogin(event)">
+      <input type="hidden" id="redirectInput" value="${dest}">
+      <div class="auth-input-group">
+        <label class="auth-label">Enter Master Security Password</label>
+        <input type="password" id="authPassword" class="auth-input" placeholder="••••••••••••" autofocus required>
+      </div>
+
+      <button type="submit" id="authSubmitBtn" class="auth-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        Authenticate & Unlock
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Protected System for <strong>AutoCad ConsumeR</strong> Officers.<br>
+      <a href="/">← Return to Public Storefront</a>
+    </div>
+  </div>
+
+  <script>
+    function handleAdminLogin(e) {
+      e.preventDefault();
+      const pwd = document.getElementById('authPassword').value;
+      const redirect = document.getElementById('redirectInput').value;
+      const alertBox = document.getElementById('authAlert');
+      const btn = document.getElementById('authSubmitBtn');
+
+      btn.disabled = true;
+      btn.innerText = 'Verifying Security Token...';
+      alertBox.style.display = 'none';
+
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd, redirect: redirect })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = data.redirect || '/admin';
+        } else {
+          alertBox.style.display = 'block';
+          alertBox.innerText = data.error || 'Access Denied: Invalid Password.';
+          btn.disabled = false;
+          btn.innerHTML = 'Authenticate & Unlock';
+          document.getElementById('authPassword').value = '';
+          document.getElementById('authPassword').focus();
+        }
+      })
+      .catch(err => {
+        alertBox.style.display = 'block';
+        alertBox.innerText = 'Authentication error: ' + err.message;
+        btn.disabled = false;
+        btn.innerHTML = 'Authenticate & Unlock';
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
